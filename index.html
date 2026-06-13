@@ -357,15 +357,7 @@ function render() {
   const app     = document.getElementById('app');
   const liveInd = document.getElementById('live-indicator');
 
-  let matches = allMatches.slice().sort((a, b) => {
-    const pd = priority(a) - priority(b);
-    if (pd !== 0) return pd;
-    return (a.start_iso || a.local_start).localeCompare(b.start_iso || b.local_start);
-  });
-
-  if (activeFilter !== 'all') {
-    matches = matches.filter(m => getFilterTags(m).includes(activeFilter));
-  }
+  let matches = allMatches.slice().filter(m => activeFilter === 'all' || getFilterTags(m).includes(activeFilter));
 
   const anyLive = allMatches.some(m => effectiveStatus(m) === 'in_progress');
   liveInd.style.display = anyLive ? 'flex' : 'none';
@@ -375,16 +367,42 @@ function render() {
     return;
   }
 
+  matches.sort((a, b) => {
+    const ta = a.start_iso || '';
+    const tb = b.start_iso || '';
+    if (ta !== tb) return ta.localeCompare(tb);
+    return priority(a) - priority(b);
+  });
+
   const live   = matches.filter(m => effectiveStatus(m) === 'in_progress');
   const active = matches.filter(m => effectiveStatus(m) === 'active');
-  const sched  = matches.filter(m => effectiveStatus(m) === 'scheduled');
-  const done   = matches.filter(m => effectiveStatus(m) === 'completed');
+  const rest   = matches.filter(m => { const s = effectiveStatus(m); return s !== 'in_progress' && s !== 'active'; });
+
+  // Group rest by calendar date (YYYY-MM-DD from start_iso)
+  const dayOrder = [];
+  const byDay = {};
+  rest.forEach(m => {
+    const day = (m.start_iso || '').slice(0, 10);
+    if (!byDay[day]) { byDay[day] = []; dayOrder.push(day); }
+    byDay[day].push(m);
+  });
+
+  const todayStr    = new Date().toISOString().slice(0, 10);
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 
   let html = '<div class="match-list">';
-  if (live.length)   { html += `<div class="section-label">Live now</div>`;  live.forEach(m   => { html += buildCard(m); }); }
+  if (live.length)   { html += `<div class="section-label">Live now</div>`;  live.forEach(m => { html += buildCard(m); }); }
   if (active.length) { html += `<div class="section-label">Suspended</div>`; active.forEach(m => { html += buildCard(m); }); }
-  if (sched.length)  { html += `<div class="section-label">Scheduled</div>`; sched.forEach(m  => { html += buildCard(m); }); }
-  if (done.length)   { html += `<div class="section-label">Results</div>`;   done.forEach(m   => { html += buildCard(m); }); }
+
+  dayOrder.forEach(day => {
+    const dayName = (byDay[day][0].local_start || '').split('·')[0].trim();
+    let label = dayName;
+    if (day === todayStr)    label = `Today · ${dayName}`;
+    else if (day === tomorrowStr) label = `Tomorrow · ${dayName}`;
+    html += `<div class="section-label">${label}</div>`;
+    byDay[day].forEach(m => { html += buildCard(m); });
+  });
+
   html += '</div>';
   app.innerHTML = html;
 }
