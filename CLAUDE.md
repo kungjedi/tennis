@@ -43,8 +43,11 @@ Fetch current tennis match data and rewrite `matches.json`. The HTML picks it up
 
 **Status rules:**
 - `scheduled`   — not started yet
-- `in_progress` — currently being played (MUST have `start_iso` in the past)
+- `in_progress` — actively being played right now (MUST have `start_iso` in the past)
+- `active`      — started but currently suspended: rain delay, bad light, end of day; will resume
 - `completed`   — match finished; include full set scores
+
+For `active` matches, include the score at the point of suspension in `sets`.
 
 **Walkovers (WO):** If a player withdrew and the match was never played, set `status: completed` and `sets: []`. Do not invent scores.
 

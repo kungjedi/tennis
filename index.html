@@ -15,6 +15,8 @@
     --dim: #555;
     --live: #e5534b;
     --live-bg: rgba(229,83,75,0.12);
+    --active: #e8a020;
+    --active-bg: rgba(232,160,32,0.12);
     --radius: 12px;
     --radius-sm: 8px;
     --radius-pill: 20px;
@@ -87,12 +89,18 @@
     content: ''; position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px; background: var(--live);
   }
+  .card.active-card { border-color: rgba(232,160,32,0.3); }
+  .card.active-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--active);
+  }
 
   .top-row { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; flex-wrap: wrap; }
   .badge { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; padding: 2px 8px; border-radius: var(--radius-pill); }
-  .badge-live { background: var(--live-bg); color: var(--live); border: 1px solid rgba(229,83,75,0.3); }
-  .badge-sched { background: rgba(255,255,255,0.06); color: var(--muted); }
-  .badge-done { background: rgba(255,255,255,0.04); color: var(--dim); }
+  .badge-live   { background: var(--live-bg);   color: var(--live);   border: 1px solid rgba(229,83,75,0.3); }
+  .badge-active { background: var(--active-bg); color: var(--active); border: 1px solid rgba(232,160,32,0.3); }
+  .badge-sched  { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .badge-done   { background: rgba(255,255,255,0.04); color: var(--dim); }
   .time-str { font-size: 12px; color: var(--muted); }
   .cat-tag {
     margin-left: auto; font-size: 10px; font-weight: 600;
@@ -259,7 +267,7 @@ function getFilterTags(m) {
   const tl = m.tournament.toLowerCase();
   const tags = ['all'];
   const st = effectiveStatus(m);
-  if (st === 'in_progress')                                              tags.push('live');
+  if (st === 'in_progress' || st === 'active')                          tags.push('live');
   if (tl.includes('women') || tl.includes('wta'))                       tags.push('wta');
   if (tl.includes('men') || tl.includes('atp') || tl.includes('challenger')) tags.push('atp');
   if (tl.includes('doubles'))                                            tags.push('doubles');
@@ -268,6 +276,7 @@ function getFilterTags(m) {
 }
 
 function effectiveStatus(m) {
+  if (m.status === 'active') return 'active';
   if (m.status !== 'in_progress') return m.status;
   if (!m.start_iso) return m.status;
   if (new Date(m.start_iso) - new Date() > 2 * 60 * 1000) return 'scheduled';
@@ -275,13 +284,17 @@ function effectiveStatus(m) {
 }
 
 function priority(m) {
-  const tl = m.tournament.toLowerCase();
-  const isUK   = UK_WORDS.some(k => tl.includes(k));
-  const isLive = effectiveStatus(m) === 'in_progress';
-  if (isLive && isUK) return 0;
-  if (isLive)          return 1;
-  if (isUK)            return 2;
-  return 3;
+  const tl      = m.tournament.toLowerCase();
+  const isUK    = UK_WORDS.some(k => tl.includes(k));
+  const st      = effectiveStatus(m);
+  const isLive  = st === 'in_progress';
+  const isActive = st === 'active';
+  if (isLive && isUK)    return 0;
+  if (isLive)             return 1;
+  if (isActive && isUK)  return 2;
+  if (isActive)           return 3;
+  if (isUK)               return 4;
+  return 5;
 }
 
 function fmtScore(sets) {
@@ -297,6 +310,7 @@ const SVG_LIVE = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" str
 function buildCard(m) {
   const st       = effectiveStatus(m);
   const isLive   = st === 'in_progress';
+  const isActive = st === 'active';
   const isDone   = st === 'completed';
   const channels = getChannels(m.tournament);
   const cat      = getCat(m.tournament);
@@ -305,8 +319,8 @@ function buildCard(m) {
   const tourDisp = getTournamentDisplay(m.tournament);
   const awayPart = m.away && m.away !== 'TBC' ? ` <span class="vs">vs</span> ${m.away}` : '';
 
-  const badgeCls = isLive ? 'badge-live' : isDone ? 'badge-done' : 'badge-sched';
-  const badgeTxt = isLive ? '● LIVE' : isDone ? 'RESULT' : 'SCHEDULED';
+  const badgeCls = isLive ? 'badge-live' : isActive ? 'badge-active' : isDone ? 'badge-done' : 'badge-sched';
+  const badgeTxt = isLive ? '● LIVE' : isActive ? '⏸ SUSPENDED' : isDone ? 'RESULT' : 'SCHEDULED';
 
   const tvHTML = channels.length
     ? channels.map(ch => {
@@ -320,7 +334,7 @@ function buildCard(m) {
     : '';
 
   return `
-  <div class="card${isLive ? ' live-card' : ''}">
+  <div class="card${isLive ? ' live-card' : isActive ? ' active-card' : ''}">
     <div class="top-row">
       <span class="badge ${badgeCls}">${badgeTxt}</span>
       <span class="time-str">${m.local_start.replace(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s*/i,'')}</span>
@@ -361,14 +375,16 @@ function render() {
     return;
   }
 
-  const live  = matches.filter(m => effectiveStatus(m) === 'in_progress');
-  const sched = matches.filter(m => effectiveStatus(m) === 'scheduled');
-  const done  = matches.filter(m => effectiveStatus(m) === 'completed');
+  const live   = matches.filter(m => effectiveStatus(m) === 'in_progress');
+  const active = matches.filter(m => effectiveStatus(m) === 'active');
+  const sched  = matches.filter(m => effectiveStatus(m) === 'scheduled');
+  const done   = matches.filter(m => effectiveStatus(m) === 'completed');
 
   let html = '<div class="match-list">';
-  if (live.length)  { html += `<div class="section-label">Live now</div>`;  live.forEach(m  => { html += buildCard(m); }); }
-  if (sched.length) { html += `<div class="section-label">Scheduled</div>`; sched.forEach(m => { html += buildCard(m); }); }
-  if (done.length)  { html += `<div class="section-label">Results</div>`;   done.forEach(m  => { html += buildCard(m); }); }
+  if (live.length)   { html += `<div class="section-label">Live now</div>`;  live.forEach(m   => { html += buildCard(m); }); }
+  if (active.length) { html += `<div class="section-label">Suspended</div>`; active.forEach(m => { html += buildCard(m); }); }
+  if (sched.length)  { html += `<div class="section-label">Scheduled</div>`; sched.forEach(m  => { html += buildCard(m); }); }
+  if (done.length)   { html += `<div class="section-label">Results</div>`;   done.forEach(m   => { html += buildCard(m); }); }
   html += '</div>';
   app.innerHTML = html;
 }

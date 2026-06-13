@@ -33,7 +33,7 @@
     },
     {
       "id": "4",
-      "status": "in_progress",
+      "status": "active",
       "home": "Raducanu, Emma",
       "away": "Rakhimova, Kamilla",
       "tournament": "WTA 500 HSBC Championships Queens Club London Women Singles",
@@ -73,7 +73,7 @@
     },
     {
       "id": "8",
-      "status": "in_progress",
+      "status": "active",
       "home": "Medvedev, Daniil",
       "away": "Cilic, Marin",
       "tournament": "ATP S-Hertogenbosch, Netherlands Men Singles",
