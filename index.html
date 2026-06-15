@@ -204,7 +204,9 @@
 
 <script>
 const CH = {
-  BBC:        { label:'BBC iPlayer',      css:'btn-bbc',    url:'https://www.bbc.co.uk/iplayer/search?q=tennis', ios:'bbc-iptvplayer://' },
+  BBC_ONE:    { label:'BBC One',           css:'btn-bbc',    url:'https://www.bbc.co.uk/iplayer/live/bbcone',  ios:'bbc-iptvplayer://' },
+  BBC_TWO:    { label:'BBC Two',           css:'btn-bbc',    url:'https://www.bbc.co.uk/iplayer/live/bbctwo',  ios:'bbc-iptvplayer://' },
+  BBC_RED:    { label:'BBC Red Button',    css:'btn-bbc',    url:'https://www.bbc.co.uk/sport/tennis',         ios:'bbc-iptvplayer://' },
   SKY:        { label:'Sky Sports Tennis', css:'btn-sky',    url:'https://www.skysports.com/watch/tennis-on-sky', ios:'skygo://' },
   WTA:        { label:'WTA Unlocked ❖',  css:'btn-wta',    url:'https://www.wtatennis.com/unlocked', ios:'https://www.wtatennis.com/unlocked' },
   CHALLENGER: { label:'Challenger TV ❖', css:'btn-atp',    url:'https://www.atptour.com/en/atp-challenger-tour/challenger-tv', ios:'https://www.atptour.com/en/atp-challenger-tour/challenger-tv' },
@@ -213,12 +215,12 @@ const CH = {
 
 function getChannels(t) {
   const tl = t.toLowerCase();
-  if (tl.includes('queen') || tl.includes('hsbc'))            return [CH.BBC, CH.SKY];
+  if (tl.includes('queen') || tl.includes('hsbc'))            return [CH.BBC_TWO, CH.SKY];
   if (tl.includes('ilkley') && (tl.includes('challenger') || (tl.includes('men') && !tl.includes('women')))) return [CH.CHALLENGER];
   if (tl.includes('ilkley'))                                  return [CH.WTA];
   if (tl.includes('hertogenbosch') || tl.includes('libema'))  return tl.includes('men') && !tl.includes('women') ? [CH.TENNIS_TV, CH.SKY] : [CH.TENNIS_TV];
-  if (tl.includes('london'))                                  return [CH.BBC, CH.SKY];
-  if (tl.includes('wimbledon'))                               return [CH.BBC];
+  if (tl.includes('london'))                                  return [CH.BBC_TWO, CH.SKY];
+  if (tl.includes('wimbledon'))                               return [CH.BBC_ONE, CH.BBC_TWO];
   if (tl.includes('125') || tl.includes('wta'))               return [CH.WTA];
   if (tl.includes('challenger'))                              return [CH.CHALLENGER];
   if (tl.includes('atp'))                                     return [CH.TENNIS_TV, CH.SKY];
